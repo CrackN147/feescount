@@ -12,6 +12,22 @@ const Output = () => {
     return Math.round(n) / p;
   }
 
+  const groupUsData = (id, amount, date) => {
+    return { id, amount, 
+      endOfWeek: endOfWeek(new Date(date), {
+        weekStartsOn: 1
+      })
+    }
+  }
+
+  const getPercentage = (amount, percents) => (
+    amount / 100 * percents
+  )
+
+  const getAmount = (amount, weekAmount, percents) => (
+    amount > weekAmount ? ((amount - weekAmount) / 100 * percents) : 0
+  )
+
   const getData = useCallback(async () => {
     if (appData) {
       const apiData = await API.getInputData();
@@ -23,52 +39,26 @@ const Output = () => {
           let commission = 0;
           // Logic for Cash In
           if (appData.cashIn && item.type === API.config.cashTypeIn) {
-            commission = item.operation.amount / 100 * appData.cashIn.percents
+            commission = getPercentage(item.operation.amount,appData.cashIn.percents);
             if (commission > appData.cashIn.max.amount) 
               commission = appData.cashIn.max.amount;
           }
           // Logic for Cash Out
-          if (item.type === API.config.cashTypeOut) {
+          else if (item.type === API.config.cashTypeOut) {
             // Natural 
             if (appData.cashOutNatural && item.user_type === API.config.userTypeNatural) {
-              let wsIndex = weekSum.findIndex(x => x.user_id === item.user_id);
-              if (wsIndex === -1) {
-                weekSum.push({
-                  user_id: item.user_id,
-                  amount: item.operation.amount,
-                  endOfWeek: endOfWeek(new Date(item.date), {weekStartsOn: 1}),
-                });
-                
-                if (item.operation.amount <= appData.cashOutNatural.week_limit.amount) {
-                  commission = 0;
-                } else {
-                  commission = (item.operation.amount - appData.cashOutNatural.week_limit.amount) / 100 * appData.cashOutNatural.percents
-                }
+              let wsIndex = weekSum.findIndex(x => x.id === item.user_id);
+              if (wsIndex === -1 || compareAsc(new Date(item.date), weekSum[wsIndex].endOfWeek) === 1) {
+                weekSum.push(groupUsData(item.user_id, item.operation.amount, item.date));
+                commission = getAmount(item.operation.amount, appData.cashOutNatural.week_limit.amount, appData.cashOutNatural.percents);
               } else {
-                if (compareAsc(new Date(item.date), weekSum[wsIndex].endOfWeek) < 1) {
-                  weekSum[wsIndex].amount += item.operation.amount;
-                  if (weekSum[wsIndex].amount <= appData.cashOutNatural.week_limit.amount) {
-                    commission = 0;
-                  } else {
-                    commission = item.operation.amount / 100 * appData.cashOutNatural.percents
-                  }
-                } else {
-                  weekSum[wsIndex] = {
-                    user_id: item.user_id,
-                    amount: item.operation.amount,
-                    endOfWeek: endOfWeek(new Date(item.date), {weekStartsOn: 1})
-                  };
-                  if (item.operation.amount <= appData.cashOutNatural.week_limit.amount) {
-                    commission = 0;
-                  } else {
-                    commission = (item.operation.amount - appData.cashOutNatural.week_limit.amount) / 100 * appData.cashOutNatural.percents
-                  }
-                }
+                weekSum[wsIndex].amount += item.operation.amount;
+                commission = weekSum[wsIndex].amount > appData.cashOutNatural.week_limit.amount ? getPercentage(item.operation.amount, appData.cashOutNatural.percents) : 0;
               }
             }
             // Legal
-            if (appData.cashOutLegal && item.user_type === API.config.userTypeLegal) {
-              commission = item.operation.amount / 100 * appData.cashOutLegal.percents
+            else if (appData.cashOutLegal && item.user_type === API.config.userTypeLegal) {
+              commission = getPercentage(item.operation.amount, appData.cashOutLegal.percents)
               if (commission < appData.cashOutLegal.min.amount) 
                 commission = appData.cashOutLegal.min.amount;
             }
