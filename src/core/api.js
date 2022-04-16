@@ -1,0 +1,22 @@
+import config from './config'
+const API = {
+  config,
+  getInputData: async () => {
+    return fetch(config.InputDataPath).then((response) => {
+      if (response.ok) {
+        return response.json();
+      } else {
+        throw new Error('NoData');
+      }
+    }).catch(() => false );
+  },
+  getAppConfig: async () => {
+    return Promise.all([
+      fetch(config.cashInPath).then(response => response.json()).catch(() => false),
+      fetch(config.cashOutNaturalPath).then(response => response.json()).catch(() => false),
+      fetch(config.cashOutLegalPath).then(response => response.json()).catch(() => false),
+    ]).then(([cashIn, cashOutNatural, cashOutLegal]) => ({ cashIn, cashOutNatural, cashOutLegal })).catch(() => false )
+  }
+}
+
+export default API;
