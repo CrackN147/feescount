@@ -2,7 +2,7 @@ import React, {useState, useEffect, useContext} from 'react';
 import { compareAsc, endOfWeek } from 'date-fns'
 import { AppDataContext }   from '../contexts/appdata';
 import { NoResults, Loading, Tabs, Item } from './';
-import { getInputData, config } from '../core';
+import { getGlobalData, getLocalData, config } from '../core';
 
 export const Output = () => {
   const { appData } = useContext(AppDataContext);
@@ -73,7 +73,7 @@ export const Output = () => {
   useEffect(() => {
     if (appData !== null && data === null) {
       const getData = async () => {
-        let apiData = await getInputData();
+        let apiData = await (config.InputDataLocal ? getLocalData() : getGlobalData());
         if (apiData && apiData.length > 0) {
           let weekSum = [];
           apiData.map((item) => {
@@ -85,7 +85,7 @@ export const Output = () => {
             // Logic for Cash Out
             else if (item.type === config.cashTypeOut) {
               // Natural 
-              if (appData.cashOutNatural && item.user_type === config.userTypeNatural) {console.log(weekSum);
+              if (appData.cashOutNatural && item.user_type === config.userTypeNatural) {
                 let calc = commissionForCashOutNatural(weekSum, item, appData);
                 commission = calc.commission;
                 weekSum = calc.weekSum;

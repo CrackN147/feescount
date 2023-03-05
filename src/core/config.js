@@ -1,4 +1,5 @@
 export const config = {
+  InputDataLocal: true,
   InputDataPath: 'https://raw.githubusercontent.com/CrackN147/feescount/production/src/test.data.json',
   cashInPath: 'https://developers.paysera.com/tasks/api/cash-in',
   cashOutNaturalPath: 'https://developers.paysera.com/tasks/api/cash-out-natural',

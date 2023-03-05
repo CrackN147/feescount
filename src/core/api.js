@@ -1,5 +1,9 @@
 import { config } from './'
-export const getInputData = async () => {
+export const getLocalData = async () => {
+  let data = require('../test.data.json');
+  return data;
+}
+export const getGlobalData = async () => {
   return fetch(config.InputDataPath).then((response) => {
     if (response.ok) {
       return response.json();
