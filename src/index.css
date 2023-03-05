@@ -66,5 +66,18 @@ code {
 } 
 
 .output {
-  
+  width: 60%;
+  padding: 20px;
+}
+
+.row {
+  margin: 7px 10px;
+  display: inline-flex;
+  width: 100%;
+}
+
+.row div {
+  display: inline-block;
+  justify-content: center;
+  width: 100%;
 }

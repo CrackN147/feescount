@@ -1,12 +1,12 @@
 import React, {useState, useEffect, useContext} from 'react';
 import { compareAsc, endOfWeek } from 'date-fns'
 import { AppDataContext }   from '../contexts/appdata';
-import { NoResults, Loading } from './';
+import { NoResults, Loading, Tabs, Item } from './';
 import { getInputData, config } from '../core';
 
 export const Output = () => {
   const { appData } = useContext(AppDataContext);
-  const [data, setData] = useState(false);
+  const [data, setData] = useState(null);
 
   const roundUp = (num, decimalPlaces = 0) => {
     let p = Math.pow(10, decimalPlaces);
@@ -14,7 +14,7 @@ export const Output = () => {
     return Math.round(n) / p;
   }
 
-  const groupUsData = (id, amount, date) => {
+  const groupUserData = (id, amount, date) => {
     let today = new Date(date);
     return { 
       id, 
@@ -25,7 +25,7 @@ export const Output = () => {
     }
   }
 
-  const getPercentage = (amount, percents) => {
+  const getPercent = (amount, percents) => {
     return amount / 100 * percents;
   }
 
@@ -38,30 +38,32 @@ export const Output = () => {
   }
 
   const commissionForCashIN = (item, appData) => {
-    let commission = getPercentage(item.operation.amount, appData.cashIn.percents);
+    let commission = getPercent(item.operation.amount, appData.cashIn.percents);
     if (commission > appData.cashIn.max.amount){
       commission = appData.cashIn.max.amount;
     }
     return commission;
   }
-  const commissionForCashOutNatural = (item, appData) => {
-    let weekSum = [];
+  const commissionForCashOutNatural = (weekSum, item, appData) => {
     let commission = 0;
     let wsIndex = weekSum.findIndex(x => x.id === item.user_id);
     if (wsIndex === -1 || compareAsc(new Date(item.date), weekSum[wsIndex].endOfWeek) === 1) {
-      weekSum.push(groupUsData(item.user_id, item.operation.amount, item.date));
+      weekSum.push(groupUserData(item.user_id, item.operation.amount, item.date));
       commission = getCommissionAmount(item.operation.amount, appData.cashOutNatural.week_limit.amount, appData.cashOutNatural.percents);
     } else {
       weekSum[wsIndex].amount += item.operation.amount;
       if (weekSum[wsIndex].amount > appData.cashOutNatural.week_limit.amount) {
-        commission = getPercentage(item.operation.amount, appData.cashOutNatural.percents);
+        commission = getPercent(item.operation.amount, appData.cashOutNatural.percents);
       }
     }
-    return commission;
+    return {
+      commission, 
+      weekSum
+    };
   }
 
   const commissionForCashOutLegal = (item, appData) => {
-    let commission = getPercentage(item.operation.amount, appData.cashOutLegal.percents)
+    let commission = getPercent(item.operation.amount, appData.cashOutLegal.percents)
     if (commission < appData.cashOutLegal.min.amount) {
       commission = appData.cashOutLegal.min.amount;
     }
@@ -69,13 +71,12 @@ export const Output = () => {
   }
 
   useEffect(() => {
-    if (appData && !data) {
+    if (appData !== null && data === null) {
       const getData = async () => {
         let apiData = await getInputData();
         if (apiData && apiData.length > 0) {
-          let result = [];
-          for (let i = 0; i < apiData.length; i++) {
-            const item = apiData[i];
+          let weekSum = [];
+          apiData.map((item) => {
             let commission = 0;
             // Logic for Cash In
             if (appData.cashIn && item.type === config.cashTypeIn) {
@@ -84,18 +85,22 @@ export const Output = () => {
             // Logic for Cash Out
             else if (item.type === config.cashTypeOut) {
               // Natural 
-              if (appData.cashOutNatural && item.user_type === config.userTypeNatural) {
-                commission = commissionForCashOutNatural(item, appData);
+              if (appData.cashOutNatural && item.user_type === config.userTypeNatural) {console.log(weekSum);
+                let calc = commissionForCashOutNatural(weekSum, item, appData);
+                commission = calc.commission;
+                weekSum = calc.weekSum;
               }
               // Legal
               else if (appData.cashOutLegal && item.user_type === config.userTypeLegal) {
                 commission = commissionForCashOutLegal(item, appData);
               }
             }
-            item.commission = roundUp(commission, 2);
-            result.push(item);
-          }
-          setData(result);
+            item.commission = parseFloat(roundUp(commission, 2)).toFixed(2);
+            return item;
+          });
+          setData(apiData);
+        } else {
+          setData(false);
         }
       }
       getData();
@@ -105,18 +110,18 @@ export const Output = () => {
 
   return (
     <div className='container'>
-      {!data &&
+      {data === null &&
         <Loading/>
       }
-      {data.length > 0 ?
+      {(data && appData && data.length > 0) &&
         <div className="output">
+          <Tabs/>
           {data.map((item, i) => (
-            <div key={`output-item-${i}`}>
-              {parseFloat(item.commission).toFixed(2)}
-            </div>
+            <Item key={`output-item-${i}`} {...{item}}/>
           ))}
         </div>
-      :
+      }
+      {((data === false || appData === false || (data !== null && data.length === 0))) &&
         <NoResults/>
       }
     </div>

@@ -8,8 +8,10 @@ export const AppDataProvider = (props) => {
   useEffect(() => {
     const generateAppData = async () => {
       let apiData = await getAppConfig()
-      if (apiData) {
+      if (apiData && apiData.cashOutNatural && apiData.cashOutLegal && apiData.cashIn) {
         setAppData(apiData);
+      } else {
+        setAppData(false);
       }
     };
     if (!appData) {
