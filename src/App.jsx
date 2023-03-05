@@ -1,6 +1,6 @@
 import React from 'react';
-import Output from './components/Output';
-import {AppDataProvider} from './contexts/appdata';
+import { Output } from './components';
+import { AppDataProvider } from './contexts/appdata';
 const App = () => {
   return (
     <AppDataProvider>

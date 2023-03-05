@@ -1,27 +1,26 @@
-import React, { useRef, useState, useEffect, useCallback, createContext } from 'react';
-import API from '../core/api';
+import React, { useState, useEffect, createContext } from 'react';
+import { getAppConfig } from '../core';
 export const AppDataContext = createContext();
 
 export const AppDataProvider = (props) => {
-  let loader = useRef();
-  const [appData, setAppData] = useState(false);
-  
-  const generateAppData = useCallback(async () => {
-    if (!loader.current) {
-      loader.current = true;
-      const apiData = await API.getAppConfig()
-      if (apiData) setAppData(apiData);
-    }
-  }, [])
+  const [appData, setAppData] = useState(null);
 
   useEffect(() => {
-    generateAppData()
-  }, [generateAppData]);
+    const generateAppData = async () => {
+      let apiData = await getAppConfig()
+      if (apiData) {
+        setAppData(apiData);
+      }
+    };
+    if (!appData) {
+      generateAppData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <AppDataContext.Provider value={{ appData}}>
+    <AppDataContext.Provider value={{ appData }}>
       {props.children}
     </AppDataContext.Provider>
   );
 };
-export default AppDataProvider;
